@@ -1,0 +1,78 @@
+<UserControl x:Class="SPS.App.Views.Panels.SensorParametersView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:SPS.App.Views.Components"
+             xmlns:models="clr-namespace:SPS.App.Models"
+             mc:Ignorable="d"
+             d:DesignHeight="450"
+             d:DesignWidth="340"
+             d:DataContext="{d:DesignInstance models:ImuParams}">
+    <UserControl.Resources>
+        <DataTemplate DataType="{x:Type models:ImuParams}">
+            <StackPanel>
+                <local:ParameterRow Margin="0,0,0,14" Title="Amplitude"
+                                    Value="{Binding AmplitudeDeg, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                    Minimum="0" Maximum="180" StepSmall="1" StepLarge="5" Unit="deg" MinLabel="Min 0" />
+                <local:ParameterRow Margin="0,0,0,14" Title="Frequency"
+                                    Value="{Binding FrequencyHz, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                    Minimum="0" Maximum="20" StepSmall="0.1" StepLarge="0.5" Unit="Hz" MinLabel="0 Hz" />
+                <local:ParameterRow Margin="0,0,0,14" Title="Offset"
+                                    Value="{Binding OffsetDeg, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                    Minimum="-180" Maximum="180" StepSmall="1" StepLarge="5" Unit="deg" MinLabel="-180" />
+            </StackPanel>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type models:FsrParams}">
+            <StackPanel>
+                <local:ParameterRow Margin="0,0,0,14" Title="Force amplitude"
+                                    Value="{Binding ForceAmplitude, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                    Minimum="0" Maximum="200" StepSmall="0.5" StepLarge="5" Unit="N" MinLabel="Min 0" />
+                <local:ParameterRow Margin="0,0,0,14" Title="Force offset"
+                                    Value="{Binding ForceOffset, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                    Minimum="0" Maximum="200" StepSmall="0.5" StepLarge="5" Unit="N" MinLabel="Min 0" />
+                <local:ParameterRow Margin="0,0,0,14" Title="Model a"
+                                    Value="{Binding FsrA, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                    Minimum="0.01" Maximum="2" StepSmall="0.01" StepLarge="0.1" Unit="" MinLabel="Min 0.01" />
+                <local:ParameterRow Margin="0,0,0,14" Title="Model b"
+                                    Value="{Binding FsrB, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                    Minimum="0.1" Maximum="2.5" StepSmall="0.05" StepLarge="0.2" Unit="" MinLabel="Min 0.1" />
+                <local:ParameterRow Margin="0,0,0,14" Title="Rmin"
+                                    Value="{Binding FsrRmin, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                    Minimum="10" Maximum="5000" StepSmall="10" StepLarge="100" Unit="ohm" MinLabel="Min 10" />
+            </StackPanel>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type models:StrainParams}">
+            <StackPanel>
+                <local:ParameterRow Margin="0,0,0,14" Title="Offset"
+                                    Value="{Binding EpsilonOffsetMicro, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                    Minimum="0" Maximum="1000" StepSmall="5" StepLarge="25" Unit="ue" MinLabel="Min 0" />
+                <local:ParameterRow Margin="0,0,0,14" Title="Amplitude"
+                                    Value="{Binding EpsilonAmplitudeMicro, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                    Minimum="0" Maximum="1000" StepSmall="5" StepLarge="25" Unit="ue" MinLabel="Min 0" />
+                <local:ParameterRow Margin="0,0,0,14" Title="Gauge factor"
+                                    Value="{Binding GaugeFactor, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                    Minimum="1" Maximum="4" StepSmall="0.05" StepLarge="0.2" Unit="" MinLabel="Min 1" />
+                <local:ParameterRow Margin="0,0,0,14" Title="Excitation"
+                                    Value="{Binding ExcitationVoltage, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                    Minimum="1" Maximum="10" StepSmall="0.1" StepLarge="0.5" Unit="V" MinLabel="Min 1" />
+            </StackPanel>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type models:EmgParams}">
+            <StackPanel>
+                <local:ParameterRow Margin="0,0,0,14" Title="Amplitude"
+                                    Value="{Binding Amplitude, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                    Minimum="0" Maximum="5" StepSmall="0.05" StepLarge="0.5" Unit="a.u." MinLabel="Min 0" />
+                <local:ParameterRow Margin="0,0,0,14" Title="Activation"
+                                    Value="{Binding ActivationLevel, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                    Minimum="0" Maximum="1" StepSmall="0.01" StepLarge="0.05" Unit="" MinLabel="Min 0" />
+            </StackPanel>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <ContentControl Content="{Binding}" />
+</UserControl>
+
