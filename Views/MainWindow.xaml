@@ -308,19 +308,32 @@
                 </Border>
             </UniformGrid>
 
-            <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Background="{StaticResource SurfaceBrush}" CornerRadius="12" Margin="8">
+            <Border Grid.Row="2" Grid.Column="0" Background="{StaticResource SurfaceBrush}" CornerRadius="12" Margin="8">
+                <Border.DataContext>
+                    <Binding Path="StrainTimePlot" />
+                </Border.DataContext>
+                <controls:PlotHost />
+            </Border>
+
+            <Border Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Background="{StaticResource SurfaceBrush}" CornerRadius="12" Margin="8">
                 <Border.DataContext>
                     <Binding Path="BodePlot" />
                 </Border.DataContext>
                 <controls:PlotHost />
             </Border>
 
-            <Border Grid.Row="2" Grid.Column="2" Background="{StaticResource SurfaceBrush}" CornerRadius="12" Margin="8">
-                <Border.DataContext>
-                    <Binding Path="PoleZeroPlot" />
-                </Border.DataContext>
+            <Border Grid.Row="3" Grid.Column="2" Background="{StaticResource SurfaceBrush}" CornerRadius="12" Margin="8">
                 <Grid>
-                    <controls:PlotHost />
+                    <TabControl Background="{StaticResource SurfaceBrush}"
+                                BorderThickness="0"
+                                Padding="4">
+                        <TabItem Header="Z-domain">
+                            <controls:PlotHost DataContext="{Binding PoleZeroPlot}" />
+                        </TabItem>
+                        <TabItem Header="S-domain">
+                            <controls:PlotHost DataContext="{Binding SPlanePlot}" />
+                        </TabItem>
+                    </TabControl>
                     <TextBlock Text="{Binding DataContext.CombinedStatus, RelativeSource={RelativeSource AncestorType=Window}}"
                                HorizontalAlignment="Center"
                                VerticalAlignment="Top"
@@ -344,21 +357,14 @@
                 </Grid>
             </Border>
 
-            <Border Grid.Row="3" Grid.Column="0" Background="{StaticResource SurfaceBrush}" CornerRadius="12" Margin="8">
-                <Border.DataContext>
-                    <Binding Path="StrainTimePlot" />
-                </Border.DataContext>
-                <controls:PlotHost />
-            </Border>
-
-            <Border Grid.Row="3" Grid.Column="1" Background="{StaticResource SurfaceBrush}" CornerRadius="12" Margin="8">
+            <Border Grid.Row="2" Grid.Column="1" Background="{StaticResource SurfaceBrush}" CornerRadius="12" Margin="8">
                 <Border.DataContext>
                     <Binding Path="EmgTimePlot" />
                 </Border.DataContext>
                 <controls:PlotHost />
             </Border>
 
-            <Border Grid.Row="3" Grid.Column="2" Background="{StaticResource SurfaceBrush}" CornerRadius="12" Margin="8">
+            <Border Grid.Row="2" Grid.Column="2" Background="{StaticResource SurfaceBrush}" CornerRadius="12" Margin="8">
                 <Border.DataContext>
                     <Binding Path="StrainEmgFftPlot" />
                 </Border.DataContext>

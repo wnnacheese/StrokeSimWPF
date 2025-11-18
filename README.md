@@ -63,7 +63,7 @@ SPS.App/
 - Panel Strain/EMG menampilkan overlay gabungan untuk membandingkan vibrasi mekanik vs aktivitas otot.
 
 ### Kartu Gabungan & Bode
-- Bobot gabungan tetap [1,1,1,1]; kartu menampilkan formula singkat, status stabilitas (mis. max |z| = 0.83), dan pesan ketika sistem tidak stabil.
+- Bobot gabungan tetap [1,1,1,1]; kartu menampilkan formula singkat, status stabilitas (mis. max |z| = 0.83), dan pesan ketika sistem tidak stabil. Baris sistem (paling bawah) memuat Bode (kolom 0-1) serta kartu pole-zero bertab Z-domain/S-domain di kolom 2.
 - Transfer function dihitung ulang setelah parameter idle 200 ms. Plot Bode/pole-zero menambahkan kurva "Combined" hanya bila sistem stabil.
 
 ### Panel Parameter & Banner
@@ -137,7 +137,7 @@ Vout = Vcc * Rfixed / (Rfixed + R(Force))
 - ForceOffset, ForceAmplitude: gaya dasar dan tambahan.
 - a, b: koefisien power-law sensor.
 - Rmin: resistansi minimum.
-- Vcc = 3.3 V, Rfixed = 10 kOhm: pembagi tegangan tetap.
+- Vcc dan Rfixed: parameter (default 3.3 V dan 10 kOhm) sehingga pembagi tegangan sepenuhnya parameter-driven.
 - Vout: tegangan keluaran yang dikirim ke plot FSR.
 
 ### Strain Gauge
@@ -170,6 +170,8 @@ G_total(s) = G_IMU(s) + G_FSR(s) + G_Strain(s) + G_EMG(s)
 ```
 
 Setiap G_sensor(s) berasal dari model analog (IMU orde-2, kanal lain orde-1). TransformsService mendiskretkan G_total(s) dengan bilinear transform sehingga bobot unity [1,1,1,1] dapat dipetakan ke domain z, dianalisis pada plot Bode/pole-zero, dan diuji stabilitasnya.
+- S-domain: pole-zero analog dihitung per sensor dan gabungan, ditampilkan pada tab S-domain.
+- Z-domain: hasil bilinear/ZOH ditampilkan pada tab Z-domain dan menjadi dasar cek stabilitas (|pole| < 1).
 
 ## Skenario Default
 

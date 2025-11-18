@@ -251,7 +251,7 @@ public sealed class SignalEngine : IDisposable
             _fsrModel.ForceAmplitude = _fsrParameters.ForceAmplitude;
             _fsrModel.BurstWidth = 0.0;
             _fsrModel.RepetitionRate = 0.0;
-            _fsrModel.FixedResistor = 10_000.0;
+            _fsrModel.FixedResistor = _fsrParameters.FixedResistor;
             _fsrModel.NoiseSigma = 0.0;
 
             var samples = FsrWaveform.Generate(_timeAxis, _fsrParameters);

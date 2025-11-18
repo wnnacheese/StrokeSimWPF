@@ -43,8 +43,6 @@ public static class ImuWaveform
 
 public static class FsrWaveform
 {
-    private const double FixedResistor = 10_000.0;
-    private const double Vcc = 3.3;
     private const double MinForce = 1e-6;
 
     public static double[] Generate(double[] time, FsrParams parameters)
@@ -59,8 +57,12 @@ public static class FsrWaveform
         double a = Math.Max(parameters.FsrA, 1e-6);
         double b = Math.Max(parameters.FsrB, 1e-6);
         double rMin = Math.Max(parameters.FsrRmin, 0.0);
+        double vcc = Math.Clamp(parameters.SupplyVoltage, 0.0, 12.0);
+        double fixedResistor = Math.Max(parameters.FixedResistor, 1e-3);
+
+        // Fully parameter-driven FSR front-end: voltage divider from F = f(params)
         double resistance = 1.0 / (a * Math.Pow(force, b)) + rMin;
-        double value = Vcc * FixedResistor / (FixedResistor + resistance);
+        double value = vcc * fixedResistor / (fixedResistor + resistance);
         Array.Fill(output, value);
         return output;
     }

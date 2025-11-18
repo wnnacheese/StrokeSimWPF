@@ -41,6 +41,8 @@ public sealed class FsrParams : SensorParamsBase
     private double _fsrA = 0.2;
     private double _fsrB = 0.8;
     private double _fsrRmin = 150.0;
+    private double _supplyVoltage = 3.3;
+    private double _fixedResistor = 10_000.0;
 
     public override SensorType SensorType => SensorType.Fsr;
 
@@ -72,6 +74,18 @@ public sealed class FsrParams : SensorParamsBase
     {
         get => _fsrRmin;
         set => SetProperty(ref _fsrRmin, Math.Clamp(value, 0.0, 5_000.0));
+    }
+
+    public double SupplyVoltage
+    {
+        get => _supplyVoltage;
+        set => SetProperty(ref _supplyVoltage, Math.Clamp(value, 0.0, 12.0));
+    }
+
+    public double FixedResistor
+    {
+        get => _fixedResistor;
+        set => SetProperty(ref _fixedResistor, Math.Clamp(value, 100.0, 100_000.0));
     }
 }
 

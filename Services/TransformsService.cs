@@ -110,6 +110,16 @@ public sealed class TransformsService
         return MathDsp.Eigenvalues(discreteSystem.A);
     }
 
+    public Complex[] GetAnalogPoles(StateSpaceSystem continuousSystem)
+    {
+        return MathDsp.Eigenvalues(continuousSystem.A);
+    }
+
+    public Complex[] GetAnalogZeros(StateSpaceSystem continuousSystem)
+    {
+        return MathDsp.StateSpaceZeroes(continuousSystem.A, continuousSystem.B, continuousSystem.C, continuousSystem.D);
+    }
+
     public Complex[] GetDiscreteZeros(StateSpaceSystem discreteSystem)
     {
         return MathDsp.StateSpaceZeroes(discreteSystem.A, discreteSystem.B, discreteSystem.C, discreteSystem.D);
@@ -166,7 +176,7 @@ public sealed class TransformsService
         }
     }
 
-    public StateSpaceSystem? BuildCombinedDiscrete(IReadOnlyList<TransferFunction> transfers, IReadOnlyList<double> weights, double sampleRate, bool useTustin = false)
+    public StateSpaceSystem? BuildCombinedContinuous(IReadOnlyList<TransferFunction> transfers, IReadOnlyList<double> weights)
     {
         if (transfers.Count == 0 || weights.Count == 0 || transfers.Count != weights.Count)
             return null;
@@ -184,8 +194,6 @@ public sealed class TransformsService
         var A = new double[stateCount, stateCount];
         var B = new double[stateCount, 1];
         var offsets = new int[sensorCount];
-        var sensorC = new List<double[,]>();
-        var sensorD = new List<double[,]>();
 
         int offset = 0;
         for (int i = 0; i < sensorCount; i++)
@@ -194,8 +202,6 @@ public sealed class TransformsService
             offsets[i] = offset;
             CopyBlock(system.A, A, offset, offset);
             CopyColumn(system.B, B, offset);
-            sensorC.Add(system.C);
-            sensorD.Add(system.D);
             offset += system.StateCount;
         }
 
@@ -218,12 +224,27 @@ public sealed class TransformsService
         if (!hasContribution)
             return null;
 
+        return new StateSpaceSystem(A, B, combinedC, combinedD);
+    }
+
+    public StateSpaceSystem? BuildCombinedDiscrete(IReadOnlyList<TransferFunction> transfers, IReadOnlyList<double> weights, double sampleRate, bool useTustin = false)
+    {
+        if (transfers.Count == 0 || weights.Count == 0 || transfers.Count != weights.Count)
+            return null;
+
+        if (weights.All(w => Math.Abs(w) < 1e-9))
+            return null;
+
+        var continuous = BuildCombinedContinuous(transfers, weights);
+        if (continuous == null)
+            return null;
+
         double samplePeriod = 1.0 / sampleRate;
         var (Ad, Bd) = useTustin
-            ? MathDsp.DiscretizeTustin(A, B, samplePeriod)
-            : MathDsp.DiscretizeZoh(A, B, samplePeriod);
+            ? MathDsp.DiscretizeTustin(continuous.A, continuous.B, samplePeriod)
+            : MathDsp.DiscretizeZoh(continuous.A, continuous.B, samplePeriod);
 
-        return new StateSpaceSystem(Ad, Bd, combinedC, combinedD);
+        return new StateSpaceSystem(Ad, Bd, continuous.C, continuous.D);
     }
 
     private StateSpaceSystem BuildContinuousStateSpace(TransferFunction transfer)

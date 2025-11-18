@@ -85,7 +85,9 @@ public sealed class ParametersStore
             }
             if (snapshot.Fsr != null)
             {
-                ApplyFsr(Fsr, snapshot.Fsr.ForceAmplitude, snapshot.Fsr.ForceOffset, snapshot.Fsr.FsrA, snapshot.Fsr.FsrB, snapshot.Fsr.FsrRmin);
+                double supply = snapshot.Fsr.SupplyVoltage > 0 ? snapshot.Fsr.SupplyVoltage : Fsr.SupplyVoltage;
+                double fixedResistor = snapshot.Fsr.FixedResistor > 0 ? snapshot.Fsr.FixedResistor : Fsr.FixedResistor;
+                ApplyFsr(Fsr, snapshot.Fsr.ForceAmplitude, snapshot.Fsr.ForceOffset, snapshot.Fsr.FsrA, snapshot.Fsr.FsrB, snapshot.Fsr.FsrRmin, supply, fixedResistor);
             }
             if (snapshot.Strain != null)
             {
@@ -122,21 +124,21 @@ public sealed class ParametersStore
             {
                 case RunPreset.BaselineStable:
                     ApplyImu(imu, 15.0, 0.0, 2.5);
-                    ApplyFsr(fsr, 10.0, 5.0, 0.4, 0.8, 400.0);
+                    ApplyFsr(fsr, 10.0, 5.0, 0.4, 0.8, 400.0, 3.3, 10_000.0);
                     ApplyStrain(strain, 150.0, 100.0, 2.0, 5.0);
                     ApplyEmg(emg, 0.5, 0.25);
                     break;
 
                 case RunPreset.FastExercise:
                     ApplyImu(imu, 60.0, 5.0, 6.0);
-                    ApplyFsr(fsr, 60.0, 20.0, 0.25, 0.7, 200.0);
+                    ApplyFsr(fsr, 60.0, 20.0, 0.25, 0.7, 200.0, 3.3, 10_000.0);
                     ApplyStrain(strain, 300.0, 500.0, 2.5, 7.0);
                     ApplyEmg(emg, 2.5, 0.8);
                     break;
 
                 case RunPreset.DriftBias:
                     ApplyImu(imu, 20.0, 30.0, 0.5);
-                    ApplyFsr(fsr, 15.0, 40.0, 0.15, 1.1, 1_000.0);
+                    ApplyFsr(fsr, 15.0, 40.0, 0.15, 1.1, 1_000.0, 3.3, 10_000.0);
                     ApplyStrain(strain, 500.0, 200.0, 3.0, 4.0);
                     ApplyEmg(emg, 1.0, 0.4);
                     break;
@@ -160,13 +162,15 @@ public sealed class ParametersStore
         imu.FrequencyHz = frequencyHz;
     }
 
-    private static void ApplyFsr(FsrParams fsr, double forceAmplitude, double forceOffset, double a, double b, double rMin)
+    private static void ApplyFsr(FsrParams fsr, double forceAmplitude, double forceOffset, double a, double b, double rMin, double supplyVoltage, double fixedResistor)
     {
         fsr.ForceAmplitude = forceAmplitude;
         fsr.ForceOffset = forceOffset;
         fsr.FsrA = a;
         fsr.FsrB = b;
         fsr.FsrRmin = rMin;
+        fsr.SupplyVoltage = supplyVoltage;
+        fsr.FixedResistor = fixedResistor;
     }
 
     private static void ApplyStrain(StrainParams strain, double offsetMicro, double amplitudeMicro, double gaugeFactor, double excitationVoltage)
@@ -232,7 +236,7 @@ public sealed class ParametersStore
     private static FsrParams CloneFsr(FsrParams source)
     {
         var clone = DefaultsFactory.CreateFsrParams();
-        ApplyFsr(clone, source.ForceAmplitude, source.ForceOffset, source.FsrA, source.FsrB, source.FsrRmin);
+        ApplyFsr(clone, source.ForceAmplitude, source.ForceOffset, source.FsrA, source.FsrB, source.FsrRmin, source.SupplyVoltage, source.FixedResistor);
         return clone;
     }
 

@@ -26,6 +26,8 @@ public sealed class FsrState
     public double FsrA { get; set; }
     public double FsrB { get; set; }
     public double FsrRmin { get; set; }
+    public double SupplyVoltage { get; set; }
+    public double FixedResistor { get; set; }
 }
 
 public sealed class StrainState

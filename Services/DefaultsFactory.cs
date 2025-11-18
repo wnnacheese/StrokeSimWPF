@@ -18,7 +18,9 @@ public static class DefaultsFactory
         ForceOffset = 2.0,
         FsrA = 0.2,
         FsrB = 0.8,
-        FsrRmin = 150.0
+        FsrRmin = 150.0,
+        SupplyVoltage = 3.3,
+        FixedResistor = 10_000.0
     };
 
     public static StrainParams CreateStrainParams() => new()

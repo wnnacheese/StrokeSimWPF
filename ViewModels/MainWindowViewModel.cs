@@ -280,6 +280,7 @@ public sealed class MainWindowViewModel : ObservableObject, IDisposable
     public MultiSeriesPlotViewModel BodePlot { get; }
 
     public PoleZeroPlotViewModel PoleZeroPlot { get; }
+    public PoleZeroPlotViewModel SPlanePlot { get; }
 
     public IReadOnlyList<LegendEntry> Legend { get; }
 
@@ -465,7 +466,8 @@ public sealed class MainWindowViewModel : ObservableObject, IDisposable
         EmgFftPlot = new MultiSeriesPlotViewModel("EMG - FFT", "Frequency (Hz)", "Magnitude (dB)");
         StrainEmgFftPlot = new MultiSeriesPlotViewModel("Strain / EMG - FFT", "Frequency (Hz)", "Magnitude (dB)");
         BodePlot = new MultiSeriesPlotViewModel("S-Domain (Bode Magnitude)", "Frequency (Hz)", "dB");
-        PoleZeroPlot = new PoleZeroPlotViewModel();
+        PoleZeroPlot = new PoleZeroPlotViewModel(PoleZeroDomain.Digital);
+        SPlanePlot = new PoleZeroPlotViewModel(PoleZeroDomain.Analog);
         ConfigureTimePlot(CombinedTimePlot, yFormat: "0.00");
         ConfigureTimePlot(ImuTimePlot, yFormat: "0.00");
         ConfigureTimePlot(FsrTimePlot, yFormat: "0.000");
@@ -1137,20 +1139,21 @@ public sealed class MainWindowViewModel : ObservableObject, IDisposable
 			return;
 		}
 		_pendingTransferUpdate = false;
-		CancellationTokenSource cancellationTokenSource = Interlocked.Exchange(ref _transferCts, new CancellationTokenSource());
-		cancellationTokenSource?.Cancel();
-		cancellationTokenSource?.Dispose();
-		CancellationTokenSource current = _transferCts;
+			CancellationTokenSource? cancellationTokenSource = Interlocked.Exchange(ref _transferCts, new CancellationTokenSource());
+			cancellationTokenSource?.Cancel();
+			cancellationTokenSource?.Dispose();
+			CancellationTokenSource? current = _transferCts;
 		Task.Run(async delegate
 		{
 			try
 			{
 				IReadOnlyList<TransferFunction> transfers = _engine.GetTransferFunctionsSnapshot();
-				(List<PlotSeries> Bode, List<(Complex Point, bool IsPole, System.Windows.Media.Color Color)> PoleZero) visuals = BuildTransferVisuals(transfers);
+				(List<PlotSeries> Bode, List<(Complex Point, bool IsPole, System.Windows.Media.Color Color)> Analog, List<(Complex Point, bool IsPole, System.Windows.Media.Color Color)> PoleZero) visuals = BuildTransferVisuals(transfers);
 				current.Token.ThrowIfCancellationRequested();
 				await _dispatcher.InvokeAsync((Action)delegate
 				{
 					BodePlot.Series = visuals.Bode;
+					SPlanePlot.Points = visuals.Analog;
 					PoleZeroPlot.Points = visuals.PoleZero;
 				});
 			}
@@ -1167,9 +1170,10 @@ public sealed class MainWindowViewModel : ObservableObject, IDisposable
 		}, current.Token);
 	}
 
-	private (List<PlotSeries> Bode, List<(Complex Point, bool IsPole, System.Windows.Media.Color Color)> PoleZero) BuildTransferVisuals(IReadOnlyList<TransferFunction> transfers)
+	private (List<PlotSeries> Bode, List<(Complex Point, bool IsPole, System.Windows.Media.Color Color)> Analog, List<(Complex Point, bool IsPole, System.Windows.Media.Color Color)> PoleZero) BuildTransferVisuals(IReadOnlyList<TransferFunction> transfers)
 	{
 		List<PlotSeries> list = new List<PlotSeries>();
+		List<(Complex, bool, System.Windows.Media.Color)> analogPoints = new List<(Complex, bool, System.Windows.Media.Color)>();
 		List<(Complex, bool, System.Windows.Media.Color)> list2 = new List<(Complex, bool, System.Windows.Media.Color)>();
 		foreach (TransferFunction transfer in transfers)
 		{
@@ -1177,6 +1181,14 @@ public sealed class MainWindowViewModel : ObservableObject, IDisposable
 			string hex = PlotFactory.GetHex(transfer.Sensor);
 			list.Add(new PlotSeries(transfer.Sensor.ToString(), _bodeFrequenciesLog10, y, hex));
 			System.Windows.Media.Color mediaColor = PlotFactory.GetMediaColor(transfer.Sensor);
+			foreach (Complex item in transfer.AnalogZeros)
+			{
+				analogPoints.Add((item, false, mediaColor));
+			}
+			foreach (Complex item in transfer.AnalogPoles)
+			{
+				analogPoints.Add((item, true, mediaColor));
+			}
 			Complex[] digitalZeros = transfer.DigitalZeros;
 			foreach (Complex item in digitalZeros)
 			{
@@ -1189,14 +1201,27 @@ public sealed class MainWindowViewModel : ObservableObject, IDisposable
 			}
 		}
         double[] weights = _transformsService.GetDefaultNormalizedWeights(transfers);
-        StateSpaceSystem stateSpaceSystem = (_combinedDiscrete = _transformsService.BuildCombinedDiscrete(transfers, weights, _sampleRate));
+		StateSpaceSystem? combinedContinuous = _transformsService.BuildCombinedContinuous(transfers, weights);
+		if (combinedContinuous != null)
+		{
+			System.Windows.Media.Color mediaColor2 = PlotFactory.MediaColorFromHex("#9FA8DA");
+			foreach (Complex pole in _transformsService.GetAnalogPoles(combinedContinuous))
+			{
+				analogPoints.Add((pole, true, mediaColor2));
+			}
+			foreach (Complex zero in _transformsService.GetAnalogZeros(combinedContinuous))
+			{
+				analogPoints.Add((zero, false, mediaColor2));
+			}
+		}
+        StateSpaceSystem? stateSpaceSystem = (_combinedDiscrete = _transformsService.BuildCombinedDiscrete(transfers, weights, _sampleRate));
 		OnPropertyChanged("IsCombinedAvailable");
 		if (stateSpaceSystem == null)
 		{
             CombinedStatus = "Combined response unavailable (fixed weights produced zero gain).";
 			CombinedMaxPole = double.NaN;
 			IsCombinedStable = false;
-			return (Bode: list, PoleZero: list2);
+			return (Bode: list, Analog: analogPoints, PoleZero: list2);
 		}
 		TransformsService.CombinedStability combinedStability = _transformsService.CheckDiscreteStability(stateSpaceSystem.A);
 		CombinedMaxPole = combinedStability.MaxMagnitude;
@@ -1204,10 +1229,10 @@ public sealed class MainWindowViewModel : ObservableObject, IDisposable
 		if (!combinedStability.IsStable)
 		{
 			CombinedStatus = "Combined model is UNSTABLE (|λ|max = " + FormatMagnitude(combinedStability.MaxMagnitude) + ")";
-			return (Bode: list, PoleZero: list2);
+			return (Bode: list, Analog: analogPoints, PoleZero: list2);
 		}
 		CombinedStatus = "Stable (max |λ| = " + FormatMagnitude(combinedStability.MaxMagnitude) + ")";
-		Complex[] array = MathDsp.DiscreteStateSpaceFrequencyResponse(stateSpaceSystem.A, stateSpaceSystem.B, stateSpaceSystem.C, stateSpaceSystem.D, _sampleRate, _bodeFrequenciesHz);
+		Complex[] array = MathDsp.DiscreteStateSpaceFrequencyResponse(stateSpaceSystem!.A, stateSpaceSystem.B, stateSpaceSystem.C, stateSpaceSystem.D, _sampleRate, _bodeFrequenciesHz);
 		double[] array2 = new double[array.Length];
 		double[] array3 = new double[array.Length];
 		for (int k = 0; k < array.Length; k++)
@@ -1232,7 +1257,7 @@ public sealed class MainWindowViewModel : ObservableObject, IDisposable
 		{
 			CombinedStatus = CombinedStatus + " | " + text;
 		}
-		return (Bode: list, PoleZero: list2);
+		return (Bode: list, Analog: analogPoints, PoleZero: list2);
 	}
 
 	private string ValidateCombinedResponse(StateSpaceSystem combinedState, double[] magnitudeDb, double[] phaseDeg)
