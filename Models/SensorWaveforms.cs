@@ -86,23 +86,32 @@ public static class FsrWaveform
 
     public static double[] Generate(double[] time, FsrParams parameters)
     {
-        var output = new double[time?.Length ?? 0];
-        if (output.Length == 0)
+        int length = time?.Length ?? 0;
+        var output = new double[length];
+        if (length == 0 || time == null)
         {
             return output;
         }
 
-        double force = Math.Max(parameters.ForceOffset + parameters.ForceAmplitude, MinForce);
+        double forceOffset = Math.Max(parameters.ForceOffset, 0.0);
+        double forceAmplitude = Math.Max(parameters.ForceAmplitude, 0.0);
         double a = Math.Max(parameters.FsrA, 1e-6);
         double b = Math.Max(parameters.FsrB, 1e-6);
         double rMin = Math.Max(parameters.FsrRmin, 0.0);
         double vcc = Math.Clamp(parameters.SupplyVoltage, 0.0, 12.0);
         double fixedResistor = Math.Max(parameters.FixedResistor, 1e-3);
+        double omega = 2 * Math.PI * 1.5; // 1.5 Hz taps
 
-        // Fully parameter-driven FSR front-end: voltage divider from F = f(params)
-        double resistance = 1.0 / (a * Math.Pow(force, b)) + rMin;
-        double value = vcc * fixedResistor / (fixedResistor + resistance);
-        Array.Fill(output, value);
+        for (int i = 0; i < length; i++)
+        {
+            double force = forceOffset + forceAmplitude * Math.Abs(Math.Sin(omega * time[i]));
+            force = Math.Max(force, MinForce);
+
+            double resistance = 1.0 / (a * Math.Pow(force, b)) + rMin;
+            double value = vcc * fixedResistor / (fixedResistor + resistance);
+            output[i] = value;
+        }
+
         return output;
     }
 
