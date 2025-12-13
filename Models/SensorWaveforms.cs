@@ -14,9 +14,26 @@ public static class ImuWaveform
     {
         int length = time?.Length ?? 0;
         var output = new double[length];
-        if (length == 0 || time == null)
+        if (time != null)
         {
-            return output;
+            Generate(time, targetValue, initialValue, stepTime, zeta, omegaN, output.AsSpan());
+        }
+        return output;
+    }
+
+    public static void Generate(
+        ReadOnlySpan<double> time,
+        double targetValue,
+        double initialValue,
+        double stepTime,
+        double zeta,
+        double omegaN,
+        Span<double> output)
+    {
+        int length = Math.Min(time.Length, output.Length);
+        if (length == 0)
+        {
+            return;
         }
 
         // Clamp physical parameters to stable domains
@@ -25,7 +42,7 @@ public static class ImuWaveform
 
         double initialDisplacement = initialValue - targetValue;
 
-        for (int i = 0; i < output.Length; i++)
+        for (int i = 0; i < length; i++)
         {
             double tDelta = time[i] - stepTime;
             if (tDelta < 0.0)
@@ -60,8 +77,6 @@ public static class ImuWaveform
                 output[i] = targetValue + initialDisplacement * expTerm * (coshTerm + zetaFactor * sinhTerm);
             }
         }
-
-        return output;
     }
 }
 

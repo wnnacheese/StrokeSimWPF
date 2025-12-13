@@ -116,15 +116,13 @@ Setiap kanal dibangkitkan dari persamaan deterministik berikut sehingga hasil si
 
 ### IMU
 
-```
-theta(t) = OffsetDeg + AmplitudeDeg * sin(2 * pi * FrequencyHz * t)
-```
+IMU kini menggunakan respons langkah orde-2 (second-order step response) dengan input persegi 2 detik yang berpindah antara `OffsetDeg +/- AmplitudeDeg`. Solusi dihitung secara closed-form untuk tiga kondisi redaman:
 
-- theta(t): sudut derajat.
-- OffsetDeg: bias statis (rentang -180 sampai 180 deg).
-- AmplitudeDeg: amplitudo sinus (0 sampai 180 deg).
-- FrequencyHz: frekuensi gerak (0 sampai 20 Hz); frekuensi 0 menghasilkan sinyal DC OffsetDeg + AmplitudeDeg.
-- t: titik waktu pada jendela buffer 5 detik.
+- **Underdamped (zeta < 1)**: ada osilasi teredam menuju target.
+- **Critically damped (zeta ~ 1)**: naik tercepat tanpa overshoot.
+- **Overdamped (zeta > 1)**: dua mode eksponensial tanpa osilasi, konvergen lebih lambat.
+
+Parameter yang dipakai: OffsetDeg, AmplitudeDeg, Zeta, dan OmegaN (omega_n). Setiap segmen waktu dihitung langsung (tanpa filter IIR/FIR) menggunakan selisih waktu terhadap titik langkah terakhir.
 
 ### FSR
 
@@ -172,6 +170,7 @@ G_total(s) = G_IMU(s) + G_FSR(s) + G_Strain(s) + G_EMG(s)
 Setiap G_sensor(s) berasal dari model analog (IMU orde-2, kanal lain orde-1). TransformsService mendiskretkan G_total(s) dengan bilinear transform sehingga bobot unity [1,1,1,1] dapat dipetakan ke domain z, dianalisis pada plot Bode/pole-zero, dan diuji stabilitasnya.
 - S-domain: pole-zero analog dihitung per sensor dan gabungan, ditampilkan pada tab S-domain.
 - Z-domain: hasil bilinear/ZOH ditampilkan pada tab Z-domain dan menjadi dasar cek stabilitas (|pole| < 1).
+- Analisis frekuensi (Bode, pole-zero) dihitung secara analitik dan terpisah dari loop simulasi domain waktu yang memakai rumus gelombang langsung.
 
 ## Skenario Default
 
@@ -184,4 +183,4 @@ Saat aplikasi pertama kali dijalankan dan tombol **Start** ditekan, simulasi mem
 ## Persistensi & Determinisme
 
 - JsonStorage menyimpan snapshot parameter di `%LOCALAPPDATA%/StrokeRecovery/parameters.json`. Jika file ada, nilainya dimuat dan preset otomatis menjadi **Custom**.
-- SignalEngine bebas RNG/perlin noise sehingga setiap preset menghasilkan respons identik antar sesi.
+- SignalEngine memakai solusi analitik tertutup (closed-form) untuk setiap sampel sehingga output numerik stabil dan deterministik 100% di setiap frame.

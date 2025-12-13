@@ -48,6 +48,7 @@ public sealed class SignalEngine : IDisposable
         SamplesPerBuffer,
         BufferDurationSeconds / Math.Max(SamplesPerBuffer - 1, 1),
         0.0);
+    private readonly double[] _imuWorkspace = new double[SamplesPerBuffer];
     private readonly Dictionary<SensorType, PropertyChangedEventHandler> _parameterSubscriptions = new();
     private readonly object _stateLock = new();
 
@@ -254,13 +255,14 @@ public sealed class SignalEngine : IDisposable
             while (writeStart < samples.Length)
             {
                 double targetValue = _imuParameters.OffsetDeg + sign * _imuParameters.AmplitudeDeg;
-                var segment = ImuWaveform.Generate(
+                ImuWaveform.Generate(
                     _timeAxis,
                     targetValue,
                     _previousPosition,
                     stepTime,
                     _imuParameters.Zeta,
-                    _imuParameters.OmegaN);
+                    _imuParameters.OmegaN,
+                    _imuWorkspace.AsSpan());
 
                 double nextStepTime = stepTime + stepInterval;
                 int nextStepIndex = Array.BinarySearch(_timeAxis, nextStepTime);
@@ -277,7 +279,7 @@ public sealed class SignalEngine : IDisposable
                 int count = nextStepIndex - writeStart;
                 if (count > 0)
                 {
-                    Array.Copy(segment, writeStart, samples, writeStart, count);
+                    _imuWorkspace.AsSpan(writeStart, count).CopyTo(samples.AsSpan(writeStart, count));
                 }
 
                 if (nextStepIndex > writeStart)
