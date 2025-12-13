@@ -9,7 +9,9 @@ public static class DefaultsFactory
     {
         AmplitudeDeg = 30.0,
         OffsetDeg = 0.0,
-        FrequencyHz = 2.5
+        FrequencyHz = 2.5,
+        OmegaN = 12.0,
+        Zeta = 0.45
     };
 
     public static FsrParams CreateFsrParams() => new()

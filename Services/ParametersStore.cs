@@ -81,7 +81,7 @@ public sealed class ParametersStore
         {
             if (snapshot.Imu != null)
             {
-                ApplyImu(Imu, snapshot.Imu.AmplitudeDeg, snapshot.Imu.OffsetDeg, snapshot.Imu.FrequencyHz);
+                ApplyImu(Imu, snapshot.Imu.AmplitudeDeg, snapshot.Imu.OffsetDeg, snapshot.Imu.FrequencyHz, snapshot.Imu.Zeta, snapshot.Imu.OmegaN);
             }
             if (snapshot.Fsr != null)
             {
@@ -123,21 +123,21 @@ public sealed class ParametersStore
             switch (preset)
             {
                 case RunPreset.BaselineStable:
-                    ApplyImu(imu, 15.0, 0.0, 2.5);
+                    ApplyImu(imu, 15.0, 0.0, 2.5, imu.Zeta, imu.OmegaN);
                     ApplyFsr(fsr, 10.0, 5.0, 0.4, 0.8, 400.0, 3.3, 10_000.0);
                     ApplyStrain(strain, 150.0, 100.0, 2.0, 5.0);
                     ApplyEmg(emg, 0.5, 0.25);
                     break;
 
                 case RunPreset.FastExercise:
-                    ApplyImu(imu, 60.0, 5.0, 6.0);
+                    ApplyImu(imu, 60.0, 5.0, 6.0, imu.Zeta, imu.OmegaN);
                     ApplyFsr(fsr, 60.0, 20.0, 0.25, 0.7, 200.0, 3.3, 10_000.0);
                     ApplyStrain(strain, 300.0, 500.0, 2.5, 7.0);
                     ApplyEmg(emg, 2.5, 0.8);
                     break;
 
                 case RunPreset.DriftBias:
-                    ApplyImu(imu, 20.0, 30.0, 0.5);
+                    ApplyImu(imu, 20.0, 30.0, 0.5, imu.Zeta, imu.OmegaN);
                     ApplyFsr(fsr, 15.0, 40.0, 0.15, 1.1, 1_000.0, 3.3, 10_000.0);
                     ApplyStrain(strain, 500.0, 200.0, 3.0, 4.0);
                     ApplyEmg(emg, 1.0, 0.4);
@@ -155,11 +155,13 @@ public sealed class ParametersStore
         SetCurrentPreset(preset, forceNotify: true);
     }
 
-    private static void ApplyImu(ImuParams imu, double amplitudeDeg, double offsetDeg, double frequencyHz)
+    private static void ApplyImu(ImuParams imu, double amplitudeDeg, double offsetDeg, double frequencyHz, double zeta, double omegaN)
     {
         imu.AmplitudeDeg = amplitudeDeg;
         imu.OffsetDeg = offsetDeg;
         imu.FrequencyHz = frequencyHz;
+        imu.Zeta = zeta;
+        imu.OmegaN = omegaN;
     }
 
     private static void ApplyFsr(FsrParams fsr, double forceAmplitude, double forceOffset, double a, double b, double rMin, double supplyVoltage, double fixedResistor)
@@ -229,7 +231,7 @@ public sealed class ParametersStore
     private static ImuParams CloneImu(ImuParams source)
     {
         var clone = DefaultsFactory.CreateImuParams();
-        ApplyImu(clone, source.AmplitudeDeg, source.OffsetDeg, source.FrequencyHz);
+        ApplyImu(clone, source.AmplitudeDeg, source.OffsetDeg, source.FrequencyHz, source.Zeta, source.OmegaN);
         return clone;
     }
 

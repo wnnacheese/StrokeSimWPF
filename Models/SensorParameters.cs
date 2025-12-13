@@ -12,6 +12,8 @@ public sealed class ImuParams : SensorParamsBase
     private double _amplitudeDeg = 35.0;
     private double _offsetDeg = 0.0;
     private double _frequencyHz = 2.5;
+    private double _omegaN = 12.0;
+    private double _zeta = 0.45;
 
     public override SensorType SensorType => SensorType.Imu;
 
@@ -31,6 +33,18 @@ public sealed class ImuParams : SensorParamsBase
     {
         get => _frequencyHz;
         set => SetProperty(ref _frequencyHz, Math.Clamp(value, 0.0, 20.0));
+    }
+
+    public double OmegaN
+    {
+        get => _omegaN;
+        set => SetProperty(ref _omegaN, Math.Clamp(value, 1.0, 40.0));
+    }
+
+    public double Zeta
+    {
+        get => _zeta;
+        set => SetProperty(ref _zeta, Math.Clamp(value, 0.05, 1.5));
     }
 }
 

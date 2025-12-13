@@ -61,6 +61,9 @@ public sealed class SignalEngine : IDisposable
     private double _latestStrain;
     private double _latestEmg;
 
+    private double _lastStepTime;
+    private double _previousPosition;
+
     public SignalEngine(
         ImuModel imu,
         FsrModel fsr,
@@ -229,15 +232,71 @@ public sealed class SignalEngine : IDisposable
     {
         lock (_stateLock)
         {
+            // Reset state for full-buffer regeneration, creating a deterministic square wave response from t=0
+            _previousPosition = _imuParameters.OffsetDeg; // Start simulation from the center
+            _lastStepTime = 0.0;
+
+            // Update the underlying model for any other services that might read it
             _imuModel.AmplitudeDeg = _imuParameters.AmplitudeDeg;
-            _imuModel.FrequencyHz = _imuParameters.FrequencyHz;
+            _imuModel.OmegaN = _imuParameters.OmegaN;
+            _imuModel.Zeta = _imuParameters.Zeta;
+            _imuModel.FrequencyHz = 0;
             _imuModel.DriftRate = 0.0;
             _imuModel.NoiseSigma = 0.0;
             _imuModel.FusionAlpha = 0.0;
-            _imuModel.OmegaN = 1.0;
-            _imuModel.Zeta = 1.0;
 
-            var samples = ImuWaveform.Generate(_timeAxis, _imuParameters);
+            var samples = new double[SamplesPerBuffer];
+            const double stepInterval = 2.0;
+            int sign = 1;
+            double stepTime = _lastStepTime;
+            int writeStart = 0;
+
+            while (writeStart < samples.Length)
+            {
+                double targetValue = _imuParameters.OffsetDeg + sign * _imuParameters.AmplitudeDeg;
+                var segment = ImuWaveform.Generate(
+                    _timeAxis,
+                    targetValue,
+                    _previousPosition,
+                    stepTime,
+                    _imuParameters.Zeta,
+                    _imuParameters.OmegaN);
+
+                double nextStepTime = stepTime + stepInterval;
+                int nextStepIndex = Array.BinarySearch(_timeAxis, nextStepTime);
+                if (nextStepIndex < 0)
+                {
+                    nextStepIndex = ~nextStepIndex;
+                }
+
+                if (nextStepIndex > samples.Length)
+                {
+                    nextStepIndex = samples.Length;
+                }
+
+                int count = nextStepIndex - writeStart;
+                if (count > 0)
+                {
+                    Array.Copy(segment, writeStart, samples, writeStart, count);
+                }
+
+                if (nextStepIndex > writeStart)
+                {
+                    _previousPosition = samples[nextStepIndex - 1];
+                }
+
+                if (nextStepIndex >= samples.Length)
+                {
+                    _lastStepTime = stepTime;
+                    break;
+                }
+
+                stepTime = nextStepTime;
+                _lastStepTime = stepTime;
+                sign *= -1;
+                writeStart = nextStepIndex;
+            }
+
             _latestImu = WriteSeries(_imuBuffer, samples, ImuDegreesLimit);
         }
 

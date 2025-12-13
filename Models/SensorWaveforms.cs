@@ -4,37 +4,61 @@ namespace SPS.App.Models;
 
 public static class ImuWaveform
 {
-    public static double[] Generate(double[] time, ImuParams parameters)
+    public static double[] Generate(
+        double[] time,
+        double targetValue,
+        double initialValue,
+        double stepTime,
+        double zeta,
+        double omegaN)
     {
-        var output = new double[time?.Length ?? 0];
-        if (output.Length == 0)
+        int length = time?.Length ?? 0;
+        var output = new double[length];
+        if (length == 0 || time == null)
         {
             return output;
         }
 
-        double amplitude = Math.Clamp(parameters.AmplitudeDeg, 0.0, 180.0);
-        double offset = Math.Clamp(parameters.OffsetDeg, -180.0, 180.0);
-        double frequency = Math.Max(parameters?.FrequencyHz ?? 0.0, 0.0);
+        // Clamp physical parameters to stable domains
+        zeta = Math.Max(0.0, zeta);
+        omegaN = Math.Max(1e-9, omegaN);
 
-        if (time == null)
-        {
-            double dcValue = amplitude + offset;
-            Array.Fill(output, dcValue);
-            return output;
-        }
+        double initialDisplacement = initialValue - targetValue;
 
-        if (frequency <= 0.0)
-        {
-            double dcValue = amplitude + offset;
-            Array.Fill(output, dcValue);
-            return output;
-        }
-
-        double omega = 2.0 * Math.PI * frequency;
         for (int i = 0; i < output.Length; i++)
         {
-            double t = time[i];
-            output[i] = offset + amplitude * Math.Sin(omega * t);
+            double tDelta = time[i] - stepTime;
+            if (tDelta < 0.0)
+            {
+                output[i] = initialValue;
+                continue;
+            }
+
+            if (zeta < 1.0)
+            {
+                double omegaD = omegaN * Math.Sqrt(1.0 - zeta * zeta);
+                double expTerm = Math.Exp(-zeta * omegaN * tDelta);
+                double cosTerm = Math.Cos(omegaD * tDelta);
+                double sinTerm = Math.Sin(omegaD * tDelta);
+                double zetaFactor = zeta / Math.Sqrt(1.0 - zeta * zeta);
+
+                output[i] = targetValue + initialDisplacement * expTerm * (cosTerm + zetaFactor * sinTerm);
+            }
+            else if (Math.Abs(zeta - 1.0) < 1e-6)
+            {
+                double expTerm = Math.Exp(-omegaN * tDelta);
+                output[i] = targetValue + initialDisplacement * expTerm * (1.0 + omegaN * tDelta);
+            }
+            else
+            {
+                double zetaRoot = Math.Sqrt(zeta * zeta - 1.0);
+                double expTerm = Math.Exp(-zeta * omegaN * tDelta);
+                double coshTerm = Math.Cosh(omegaN * zetaRoot * tDelta);
+                double sinhTerm = Math.Sinh(omegaN * zetaRoot * tDelta);
+                double zetaFactor = zeta / zetaRoot;
+
+                output[i] = targetValue + initialDisplacement * expTerm * (coshTerm + zetaFactor * sinhTerm);
+            }
         }
 
         return output;
